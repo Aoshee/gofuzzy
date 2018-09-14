@@ -26,7 +26,7 @@ func normalizeURL(fuzzURL string) (string, *url.URL, error) {
 
 	p, err := url.Parse(fuzzURL)
 	if err != nil {
-		return "", nil, fmt.Errorf("Unable to parse url/hostname %s. %s", fuzzURL, err)
+		return "", nil, fmt.Errorf("Unable to parse URL/hostname %s. %s", fuzzURL, err)
 	}
 
 	scheme := p.Scheme + "://"
@@ -48,7 +48,7 @@ func normalizeURL(fuzzURL string) (string, *url.URL, error) {
 	return completeURL, parsedURL, nil
 }
 
-func countLines(file string) uint {
+func countWordlistLines(file string) uint {
 	fh, _ := os.Open(file)
 	defer fh.Close()
 
@@ -130,7 +130,7 @@ func isHTTPPrepended(hostname string) bool {
 }
 
 func prependHTTP(hostname string) string {
-	return fmt.Sprintf("http://%s", hostname)
+	return "http://" + hostname
 }
 
 func splitHeaderFields(h, sep string) map[string]string {

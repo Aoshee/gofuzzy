@@ -63,7 +63,7 @@ func Parse(outputFormats map[string]bool) (*Opts, error) {
 	fs := flag.NewFlagSet("gofuzzy", flag.ExitOnError)
 	fs.Usage = func() {
 		fmt.Print("USAGE: gofuzzy -u example.com -w wl.txt [options]")
-		fmt.Println("\n   If the keyword '\x1b[31mFUZZ\x1b[0m' is provided somewhere, gofuzzy will replace it with an entry from the wordlist.")
+		fmt.Println("\n   If the keyword '\x1b[31mFUZZ\x1b[0m' is provided somewhere, GoFuzzy will replace it with an entry from the wordlist.")
 		fmt.Println("\nEXAMPLES:")
 		fmt.Println("   Find hidden files or directories:")
 		fmt.Println("   # gofuzzy -u example.com -w wl.txt")
@@ -85,13 +85,13 @@ func Parse(outputFormats map[string]bool) (*Opts, error) {
 	fs.StringVar(&o.HTTPHideBodyLengthRaw, "hh", "", "Hide results with specific number of chars, separated by comma. Example: -hh 48,1024")
 	fs.StringVar(&o.HTTPHideNumWordsRaw, "hw", "", "Hide results with specific number of words, separated by comma. Example: -hw 48,1024")
 	fs.StringVar(&o.HTTPHideHeaderLengthRaw, "hr", "", "Hide results with specific header length, separated by comma. Example: -hr 48,1024")
-	fs.StringVar(&o.FileExtensionsRaw, "x", "", "Appended file extension to the path, separated by comma. Example: -x .php,.html,.jpg")
+	fs.StringVar(&o.FileExtensionsRaw, "x", "", "Extension to append to the path, separated by comma. Example: -x .php,.html,.jpg")
 	fs.StringVar(&o.CustomHeader, "H", "", "Custom header fields, separated by comma. Example: -H 'User-Agent:Chrome,Cookie:Session=abcd'")
 	fs.StringVar(&o.BodyData, "d", "", "Post data.")
 	fs.StringVar(&o.UserAgent, "a", "", "User-Agent.")
 	fs.StringVar(&o.Cookie, "c", "", "Cookie.")
 	fs.StringVar(&o.OutputFile, "o", "", "Output file for the results.")
-	fs.StringVar(&o.OutputFormat, "of", "", "Format of output file. Currently supported: "+strings.Join(mapToStrArray(o.supportedOutputFormats), ", ")+". Example: -of txt")
+	fs.StringVar(&o.OutputFormat, "of", "", "Format of output file. Currently supported: "+strings.Join(mapToStrArray(outputFormats), ", ")+". Example: -of txt")
 	fs.IntVar(&o.Concurrency, "t", 8, "Concurrency level.")
 	fs.IntVar(&o.Timeout, "to", 10000, "HTTP timeout in milliseconds.")
 	fs.IntVar(&o.SleepRaw, "s", 0, "Sleep time in milliseconds between requests per Go routine.")
@@ -167,7 +167,7 @@ func validate(o *Opts) error {
 func _init(o *Opts) {
 	o.wordlistReadComplete = make(chan bool)
 	go func() {
-		o.wordlistLineCount = countLines(o.Wordlist)
+		o.wordlistLineCount = countWordlistLines(o.Wordlist)
 		o.numApproxRequests = o.wordlistLineCount * uint(len(o.FileExtensions))
 		o.wordlistReadComplete <- true
 	}()

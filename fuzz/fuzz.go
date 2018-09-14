@@ -52,24 +52,24 @@ type request struct {
 }
 
 var httpClient http.Client
-var resultChans ResultChannels
+var resultChs ResultChannels
 
 // NewFuzz initializes all public channels, so that the caller
 // can receive results on them.
 func NewFuzz(o *Opts) ResultChannels {
-	resultChans = ResultChannels{
+	resultChs = ResultChannels{
 		Result:   make(chan *Result, o.Concurrency),
 		Progress: make(chan *Progress, o.Concurrency), // Just a buffer which is large enough
 		Finished: make(chan bool),
 	}
 
-	return resultChans
+	httpClient = initHTTPClient(o)
+
+	return resultChs
 }
 
 // Start starts the main fuzzing process for a given option set.
 func Start(o *Opts) {
-	httpClient = initHTTPClient(o)
-
 	// We minimize the chance to be 'blocked' by the filesystem as we will
 	// fetch more data at once (buffered channel), so the channel remains constantly filled.
 	queuedReqsCh := make(chan *request, o.Concurrency*o.Concurrency)
@@ -107,9 +107,9 @@ func Start(o *Opts) {
 	close(queuedReqsCh)
 	concurrencyWg.Wait()
 
-	resultChans.Finished <- true
-	close(resultChans.Result)
-	close(resultChans.Finished)
+	resultChs.Finished <- true
+	close(resultChs.Result)
+	close(resultChs.Finished)
 }
 
 // produceRequests reads an entry from the wordlist and produces a request-stub
@@ -148,13 +148,13 @@ func produceProgress(o *Opts) {
 		<-o.wordlistReadComplete
 
 		tick := time.Tick(time.Millisecond * time.Duration(o.progressSendInterval))
-		progress := &Progress{}
+		p := &Progress{}
 		for {
 			select {
 			case <-tick:
-				progress.NumDoneRequests = o.numDoneRequests
-				progress.NumApproxRequests = o.numApproxRequests
-				resultChans.Progress <- progress
+				p.NumDoneRequests = o.numDoneRequests
+				p.NumApproxRequests = o.numApproxRequests
+				resultChs.Progress <- p
 			}
 		}
 	}
@@ -169,7 +169,7 @@ func consumeRequest(o *Opts, r *request) {
 	o.numDoneRequests++ // We don't care here for race conditions. It's just a nice to have progress value.
 
 	if err == nil && isInHideFilter(o, res) {
-		resultChans.Result <- res
+		resultChs.Result <- res
 	}
 
 	if err != nil {
@@ -266,7 +266,7 @@ func replaceFuzzKeywordOccurence(o *Opts, req *http.Request, r *request) (*http.
 		return nil, err
 	}
 
-	// Replace request body
+	// Replace request body.
 	body := strings.Replace(r.data, o.fuzzKeyword, r.entry, -1)
 
 	req, err = http.NewRequest(reqCopy.Method, url, strings.NewReader(body))

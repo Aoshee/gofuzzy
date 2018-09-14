@@ -16,15 +16,15 @@ func (tabCli) init() {
 	fmt.Println(banner)
 	tableWriter = new(tabwriter.Writer)
 	tableWriter.Init(os.Stdout, 13, 0, 0, ' ', 0)
+
 	fmt.Fprintln(tableWriter, "---------------------------------------------------------------------------------")
 	fmt.Fprintln(tableWriter, "Chars(-hh) \t Words(-hw) \t Lines(-hl) \t Header(-hr) \t Code(-hc) \t Result")
 	fmt.Fprintln(tableWriter, "---------------------------------------------------------------------------------")
 }
 
 func (tabCli) write(r *fuzz.Result) {
-	fmt.Fprint(tableWriter, fmt.Sprintf("%d \t %d \t %d \t %d", r.ContentLength, r.NumWords, r.NumLines, r.HeaderSize))
-	fmt.Fprint(tableWriter, fmt.Sprintf("\t %d", r.StatusCode))
-	fmt.Fprintln(tableWriter, fmt.Sprintf("\t %s", r.Result))
+	o := fmt.Sprintf("%d \t %d \t %d \t %d \t %d \t %s", r.ContentLength, r.NumWords, r.NumLines, r.HeaderSize, r.StatusCode, r.Result)
+	fmt.Fprintln(tableWriter, o)
 	tableWriter.Flush()
 }
 

@@ -33,9 +33,6 @@ func Formats() map[string]bool {
 // output media is provided.
 func SetOutput(filename, outputFormat string) Writer {
 	outputFile, _ = os.Create(filename)
-	// We want always a CLI output.
-	cli = tabCli{}
-	cli.init()
 
 	var ow Writer
 
@@ -51,6 +48,10 @@ func SetOutput(filename, outputFormat string) Writer {
 	}
 
 	ow.init()
+
+	// We want always a CLI output.
+	cli = tabCli{}
+	cli.init()
 
 	return ow
 }
