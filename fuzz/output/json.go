@@ -4,8 +4,8 @@ import (
 	// Avoids naming collision with our struct name. Yes it's dirty.
 	jsonn "encoding/json"
 	"fmt"
+	"log"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/shellrausch/gofuzzy/fuzz"
 )
 

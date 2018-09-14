@@ -1,7 +1,8 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
+	"log"
+
 	"github.com/shellrausch/gofuzzy/fuzz"
 	"github.com/shellrausch/gofuzzy/fuzz/output"
 )

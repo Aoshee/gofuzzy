@@ -3,6 +3,7 @@ package fuzz
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -11,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 // normalizeURL normalizes example.com:80 to http://example.com:80/
@@ -146,7 +145,7 @@ func splitHeaderFields(h, sep string) map[string]string {
 	for _, h := range headerFields {
 		split := strings.Split(h, ":")
 		if len(split) != 2 {
-			log.Errorf("Header not complete or the header value contains a separator char '%s' (without quotes). Broken header is: %v", sep, split)
+			log.Printf("Header not complete or the header value contains a separator char '%s' (without quotes). Broken header is: %v", sep, split)
 			continue
 		}
 

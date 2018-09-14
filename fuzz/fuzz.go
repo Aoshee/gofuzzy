@@ -6,14 +6,13 @@ import (
 	"crypto/tls"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"strings"
 	"sync"
 	"time"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 // ResultChannels is just a wrapper of all public result channels.
@@ -181,7 +180,7 @@ func consumeRequest(o *Opts, r *request) {
 
 			consumeRequest(o, r)
 		} else {
-			log.Errorf("Giving up a request, too many errors: %s", err)
+			log.Printf("Giving up a request, too many errors: %s", err)
 		}
 	}
 }
@@ -224,18 +223,10 @@ func invokeRequest(o *Opts, r *request) (*Result, error) {
 		}
 	}
 
-	// if o.Debug {
-	// 	log.Debug(dumpRequest(req))
-	// }
-
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-
-	// if o.Debug {
-	// 	log.Debug(dumpResponse(resp))
-	// }
 
 	result := populateResult(resp, r.entry)
 	defer resp.Body.Close()

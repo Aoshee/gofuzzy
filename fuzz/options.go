@@ -8,8 +8,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 // Opts contains all passed cmdline args as well as the parsed ones.
@@ -32,7 +30,6 @@ type Opts struct {
 	SleepRaw                int
 	Timeout                 int
 	Concurrency             int
-	Debug                   bool
 	FollowRedirects         bool
 	ProgressOutput          bool
 	Show404                 bool
@@ -101,7 +98,6 @@ func Parse(outputFormats map[string]bool) (*Opts, error) {
 	fs.BoolVar(&o.FollowRedirects, "f", false, "Follow 30x redirects.")
 	fs.BoolVar(&o.ProgressOutput, "p", true, "Progress output.")
 	fs.BoolVar(&o.Show404, "404", false, "Show 404 status code responses.")
-	// flag.BoolVar(&o.Debug, "debug", false, "Debug mode.")
 
 	fs.Parse(os.Args[1:])
 
@@ -115,12 +111,6 @@ func Parse(outputFormats map[string]bool) (*Opts, error) {
 }
 
 func validate(o *Opts) error {
-	log.SetLevel(log.ErrorLevel)
-
-	if o.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
-
 	if o.URLRaw == "" {
 		return fmt.Errorf("No URL/hostname provided. Use flag: -u example.com")
 	}
