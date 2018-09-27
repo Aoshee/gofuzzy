@@ -3,29 +3,30 @@ package main
 import (
 	"log"
 
-	"github.com/shellrausch/gofuzzy/fuzz"
+	"github.com/shellrausch/gofuzzy/fuzz/client"
+	"github.com/shellrausch/gofuzzy/fuzz/opts"
 	"github.com/shellrausch/gofuzzy/fuzz/output"
 )
 
 func main() {
-	opts, err := fuzz.Parse(output.Formats())
-	if err != nil {
+	o := opts.New()
+	if err := o.Parse(output.Formats()); err != nil {
 		log.Fatal(err)
 	}
 
-	writer := output.SetOutput(opts.OutputFile, opts.OutputFormat)
+	output.SetOutput(o.OutputFile, o.OutputFormat)
 
-	chans := fuzz.NewFuzz(opts)
-	go fuzz.Start(opts)
+	chans := client.New(o)
+	go client.Start(o)
 
 	for {
 		select {
 		case r := <-chans.Result:
-			output.Write(writer, r)
+			output.Write(r)
 		case p := <-chans.Progress:
-			go output.WriteProgress(writer, p)
+			go output.WriteProgress(p)
 		case <-chans.Finished:
-			output.Close(writer)
+			output.Close()
 			return
 		}
 	}

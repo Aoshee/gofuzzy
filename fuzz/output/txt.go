@@ -3,7 +3,7 @@ package output
 import (
 	"fmt"
 
-	"github.com/shellrausch/gofuzzy/fuzz"
+	"github.com/shellrausch/gofuzzy/fuzz/client"
 )
 
 type txt struct{}
@@ -13,10 +13,10 @@ func (txt) init() {
 	fmt.Fprintln(outputFile, o)
 }
 
-func (txt) write(r *fuzz.Result) {
+func (txt) write(r *client.Result) {
 	o := fmt.Sprintf("%d\t\t\t\t%d\t\t%d\t\t%d\t\t%d\t\t\t%s", r.ContentLength, r.NumWords, r.NumLines, r.HeaderSize, r.StatusCode, r.Result)
 	fmt.Fprintln(outputFile, o)
 }
 
-func (txt) writeProgress(p *fuzz.Progress) {}
-func (txt) close()                         {}
+func (txt) writeProgress(p *client.Progress) {}
+func (txt) close()                           {}

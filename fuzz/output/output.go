@@ -4,10 +4,11 @@ import (
 	"io"
 	"os"
 
-	"github.com/shellrausch/gofuzzy/fuzz"
+	"github.com/shellrausch/gofuzzy/fuzz/client"
 )
 
 var cli Writer
+var outputWriter Writer
 var outputFile io.Writer
 var supportedFormats map[string]bool
 
@@ -18,8 +19,8 @@ func init() {
 // Writer must be implemented by every output format which wants to write.
 type Writer interface {
 	init()
-	write(*fuzz.Result)
-	writeProgress(*fuzz.Progress)
+	write(*client.Result)
+	writeProgress(*client.Progress)
 	close()
 }
 
@@ -31,7 +32,7 @@ func Formats() map[string]bool {
 // SetOutput sets the output file and decides on which output media
 // the results should be shown. We always output on the CLI, also if another
 // output media is provided.
-func SetOutput(filename, outputFormat string) Writer {
+func SetOutput(filename, outputFormat string) {
 	outputFile, _ = os.Create(filename)
 
 	var ow Writer
@@ -48,27 +49,26 @@ func SetOutput(filename, outputFormat string) Writer {
 	}
 
 	ow.init()
+	outputWriter = ow
 
 	// We want always a CLI output.
 	cli = tabCli{}
 	cli.init()
-
-	return ow
 }
 
 // Write just writes the result to the defined output and additionaly to the CLI.
-func Write(ow Writer, r *fuzz.Result) {
-	ow.write(r)
+func Write(r *client.Result) {
+	outputWriter.write(r)
 	cli.write(r)
 }
 
 // WriteProgress just writes the progress to the defined output and additionaly to the CLI.
-func WriteProgress(ow Writer, pr *fuzz.Progress) {
-	ow.writeProgress(pr)
+func WriteProgress(pr *client.Progress) {
+	outputWriter.writeProgress(pr)
 	cli.writeProgress(pr)
 }
 
 // Close closes output writer.
-func Close(ow Writer) {
-	ow.close()
+func Close() {
+	outputWriter.close()
 }

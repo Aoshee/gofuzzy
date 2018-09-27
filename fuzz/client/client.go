@@ -1,4 +1,4 @@
-package fuzz
+package client
 
 import (
 	"bufio"
@@ -13,6 +13,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/shellrausch/gofuzzy/fuzz/opts"
+	"github.com/shellrausch/gofuzzy/fuzz/utils"
 )
 
 // ResultChannels is just a wrapper of all public result channels.
@@ -54,9 +57,9 @@ type request struct {
 var httpClient http.Client
 var resultChs ResultChannels
 
-// NewFuzz initializes all public channels, so that the caller
+// New initializes all public channels, so that the caller
 // can receive results on them.
-func NewFuzz(o *Opts) ResultChannels {
+func New(o *opts.Opts) ResultChannels {
 	resultChs = ResultChannels{
 		Result:   make(chan *Result, o.Concurrency),
 		Progress: make(chan *Progress, o.Concurrency), // Just a buffer which is large enough
@@ -69,7 +72,7 @@ func NewFuzz(o *Opts) ResultChannels {
 }
 
 // Start starts the main fuzzing process for a given option set.
-func Start(o *Opts) {
+func Start(o *opts.Opts) {
 	// We minimize the chance to be 'blocked' by the filesystem as we will
 	// fetch more data at once (buffered channel), so the channel remains constantly filled.
 	queuedReqsCh := make(chan *request, o.Concurrency*o.Concurrency)
@@ -114,11 +117,11 @@ func Start(o *Opts) {
 
 // produceRequests reads an entry from the wordlist and produces a request-stub
 // with all relevant information to invoke a request.
-func produceRequests(o *Opts, queuedReqsCh chan *request, producerDoneCh chan bool) {
+func produceRequests(o *opts.Opts, queuedReqsCh chan *request, producerDoneCh chan bool) {
 	fh, _ := os.Open(o.Wordlist)
 
 	url := strings.TrimSuffix(o.URLRaw, "/")
-	header := splitHeaderFields(o.CustomHeader, o.headerFieldSep)
+	header := utils.SplitHeaderFields(o.CustomHeader, o.HeaderFieldSep)
 
 	s := bufio.NewScanner(fh)
 	for s.Scan() {
@@ -140,20 +143,20 @@ func produceRequests(o *Opts, queuedReqsCh chan *request, producerDoneCh chan bo
 
 // produceProgress produces progress information in a defined interval and
 // sends them via a channel.
-func produceProgress(o *Opts) {
+func produceProgress(o *opts.Opts) {
 	if o.ProgressOutput {
 		// Especially on large wordlists this barrier is important.
 		// Because reading the whole wordlist can take some time.
 		// Otherwise we could get a division by zero in further progress calculation.
-		<-o.wordlistReadComplete
+		<-o.WordlistReadComplete
 
-		tick := time.Tick(time.Millisecond * time.Duration(o.progressSendInterval))
+		tick := time.Tick(time.Millisecond * time.Duration(o.ProgressSendInterval))
 		p := &Progress{}
 		for {
 			select {
 			case <-tick:
-				p.NumDoneRequests = o.numDoneRequests
-				p.NumApproxRequests = o.numApproxRequests
+				p.NumDoneRequests = o.NumDoneRequests
+				p.NumApproxRequests = o.NumApproxRequests
 				resultChs.Progress <- p
 			}
 		}
@@ -163,20 +166,20 @@ func produceProgress(o *Opts) {
 // consumeRequest takes a given request stub and invokes the HTTP request.
 // If an error occurs the request is repeated a number of times
 // before the request is getting canceled.
-func consumeRequest(o *Opts, r *request) {
+func consumeRequest(o *opts.Opts, r *request) {
 	res, err := invokeRequest(o, r)
 
-	o.numDoneRequests++ // We don't care here for race conditions. It's just a nice to have progress value.
+	o.NumDoneRequests++ // We don't care here for race conditions. It's just a nice to have progress value.
 
 	if err == nil && isInHideFilter(o, res) {
 		resultChs.Result <- res
 	}
 
 	if err != nil {
-		if r.retries < o.maxRequestRetries {
+		if r.retries < o.MaxRequestRetries {
 			r.retries++
 
-			o.numApproxRequests++ // We don't care for race conditions here. It's just a nice to have progress value.
+			o.NumApproxRequests++ // We don't care for race conditions here. It's just a nice to have progress value.
 
 			consumeRequest(o, r)
 		} else {
@@ -187,12 +190,12 @@ func consumeRequest(o *Opts, r *request) {
 
 // invokeRequest does the raw HTTP request. Before a HTTP request is finally done
 // the first occurence of the FUZZ keyword will be replaced by a wordlist entry.
-func invokeRequest(o *Opts, r *request) (*Result, error) {
+func invokeRequest(o *opts.Opts, r *request) (*Result, error) {
 	var req *http.Request
 	var err error
 
 	url := r.url
-	if !o.fuzzKeywordPresent {
+	if !o.FuzzKeywordPresent {
 		r.entry = strings.TrimPrefix(r.entry, "/")
 		url = r.url + "/" + r.entry + r.ext
 	}
@@ -215,7 +218,7 @@ func invokeRequest(o *Opts, r *request) (*Result, error) {
 		req.Header.Set(h, v)
 	}
 
-	if o.fuzzKeywordPresent {
+	if o.FuzzKeywordPresent {
 		req, err = replaceFuzzKeywordOccurence(o, req, r)
 
 		if err != nil {
@@ -241,10 +244,10 @@ func invokeRequest(o *Opts, r *request) (*Result, error) {
 
 // The FUZZ keyword can be everywhere in the HTTP request.
 // We replace the first occurency of the keyword FUZZ with an entry from the wordlist.
-func replaceFuzzKeywordOccurence(o *Opts, req *http.Request, r *request) (*http.Request, error) {
+func replaceFuzzKeywordOccurence(o *opts.Opts, req *http.Request, r *request) (*http.Request, error) {
 	reqBytes, _ := httputil.DumpRequest(req, true)
 
-	fuzzKeywordBytes := []byte(o.fuzzKeyword)
+	fuzzKeywordBytes := []byte(o.FuzzKeyword)
 	entryBytes := []byte(r.entry)
 
 	// Replaces most of the FUZZ places in the request.
@@ -258,16 +261,16 @@ func replaceFuzzKeywordOccurence(o *Opts, req *http.Request, r *request) (*http.
 	reqCopy, err := http.ReadRequest(bufio.NewReader(bytes.NewBuffer(replaced)))
 
 	// Replace extension.
-	ext := strings.Replace(r.ext, o.fuzzKeyword, r.entry, -1)
+	ext := strings.Replace(r.ext, o.FuzzKeyword, r.entry, -1)
 	// Replace URL.
-	url := strings.Replace(req.URL.String()+ext, o.fuzzKeyword, r.entry, -1)
+	url := strings.Replace(req.URL.String()+ext, o.FuzzKeyword, r.entry, -1)
 
 	if err != nil {
 		return nil, err
 	}
 
 	// Replace request body.
-	body := strings.Replace(r.data, o.fuzzKeyword, r.entry, -1)
+	body := strings.Replace(r.data, o.FuzzKeyword, r.entry, -1)
 
 	req, err = http.NewRequest(reqCopy.Method, url, strings.NewReader(body))
 	req.Header = reqCopy.Header
@@ -294,8 +297,8 @@ func populateResult(resp *http.Response, entry string) *Result {
 	return &Result{
 		ContentLength: int(resp.ContentLength),
 		NumLines:      bytes.Count(b, []byte{'\n'}),
-		NumWords:      countWords(&b),
-		HeaderSize:    headerSize(resp.Header),
+		NumWords:      utils.CountWords(&b),
+		HeaderSize:    utils.HeaderSize(resp.Header),
 		StatusCode:    resp.StatusCode,
 		Result:        entry,
 	}
@@ -303,17 +306,17 @@ func populateResult(resp *http.Response, entry string) *Result {
 
 // isInHideFilter determines if some values, sizes, lengths, ...
 // of the result should be filtered.
-func isInHideFilter(o *Opts, res *Result) bool {
+func isInHideFilter(o *opts.Opts, res *Result) bool {
 	return !o.HTTPHideCodes[res.StatusCode] &&
-		!o.HTTPHideBodyLines[res.NumLines] &&
 		!o.HTTPHideBodyLength[res.ContentLength] &&
 		!o.HTTPHideNumWords[res.NumWords] &&
+		!o.HTTPHideBodyLines[res.NumLines] &&
 		!o.HTTPHideHeaderLength[res.HeaderSize]
 }
 
 // initHTTPClient initialises the default HTTP client with fundamental
 // connection options for every request.
-func initHTTPClient(o *Opts) http.Client {
+func initHTTPClient(o *opts.Opts) http.Client {
 	return http.Client{
 		Timeout: time.Duration(o.Timeout) * time.Millisecond,
 		// Do not follow redirects (HTTP status codes 30x).

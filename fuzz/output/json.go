@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/shellrausch/gofuzzy/fuzz"
+	"github.com/shellrausch/gofuzzy/fuzz/client"
 )
 
 type json struct{}
 
-var jsonResults []*fuzz.Result
+var jsonResults []*client.Result
 
-func (json) write(r *fuzz.Result) {
+func (json) write(r *client.Result) {
 	jsonResults = append(jsonResults, r)
 }
 
@@ -25,5 +25,5 @@ func (json) close() {
 	fmt.Fprintln(outputFile, string(json))
 }
 
-func (json) init()                          {}
-func (json) writeProgress(p *fuzz.Progress) {}
+func (json) init()                            {}
+func (json) writeProgress(p *client.Progress) {}

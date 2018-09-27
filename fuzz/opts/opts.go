@@ -1,4 +1,4 @@
-package fuzz
+package opts
 
 import (
 	"flag"
@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/shellrausch/gofuzzy/fuzz/utils"
 )
 
 // Opts contains all passed cmdline args as well as the parsed ones.
@@ -43,22 +45,26 @@ type Opts struct {
 	Sleep                   time.Duration
 
 	// Meta options that are set during the runtime.
-	fuzzKeyword            string
-	headerFieldSep         string
-	cmdLineValueSep        string
-	maxRequestRetries      uint8
-	numApproxRequests      uint
-	numDoneRequests        uint
-	wordlistLineCount      uint
-	progressSendInterval   int
-	fuzzKeywordPresent     bool
-	wordlistReadComplete   chan bool
-	supportedOutputFormats map[string]bool
+	FuzzKeyword            string
+	HeaderFieldSep         string
+	CmdLineValueSep        string
+	MaxRequestRetries      uint8
+	NumApproxRequests      uint
+	NumDoneRequests        uint
+	WordlistLineCount      uint
+	ProgressSendInterval   int
+	FuzzKeywordPresent     bool
+	WordlistReadComplete   chan bool
+	SupportedOutputFormats map[string]bool
+}
+
+func New() *Opts {
+	return &Opts{}
 }
 
 // Parse parses and validates the cmdline args.
-func Parse(outputFormats map[string]bool) (*Opts, error) {
-	o := &Opts{supportedOutputFormats: outputFormats}
+func (o *Opts) Parse(outputFormats map[string]bool) error {
+	o.SupportedOutputFormats = outputFormats
 
 	fs := flag.NewFlagSet("gofuzzy", flag.ExitOnError)
 	fs.Usage = func() {
@@ -91,7 +97,7 @@ func Parse(outputFormats map[string]bool) (*Opts, error) {
 	fs.StringVar(&o.UserAgent, "a", "", "User-Agent.")
 	fs.StringVar(&o.Cookie, "c", "", "Cookie.")
 	fs.StringVar(&o.OutputFile, "o", "", "Output file for the results.")
-	fs.StringVar(&o.OutputFormat, "of", "", "Format of output file. Currently supported: "+strings.Join(mapToStrArray(outputFormats), ", ")+". Example: -of txt")
+	fs.StringVar(&o.OutputFormat, "of", "", "Format of output file. Currently supported: "+strings.Join(utils.MapToStrArray(outputFormats), ", ")+". Example: -of txt")
 	fs.IntVar(&o.Concurrency, "t", 8, "Concurrency level.")
 	fs.IntVar(&o.Timeout, "to", 10000, "HTTP timeout in milliseconds.")
 	fs.IntVar(&o.SleepRaw, "s", 0, "Sleep time in milliseconds between requests per Go routine.")
@@ -102,12 +108,12 @@ func Parse(outputFormats map[string]bool) (*Opts, error) {
 	fs.Parse(os.Args[1:])
 
 	if err := validate(o); err != nil {
-		return nil, err
+		return err
 	}
 
 	_init(o)
 
-	return o, nil
+	return nil
 }
 
 func validate(o *Opts) error {
@@ -115,7 +121,7 @@ func validate(o *Opts) error {
 		return fmt.Errorf("No URL/hostname provided. Use flag: -u example.com")
 	}
 
-	if _, _, err := normalizeURL(o.URLRaw); err != nil {
+	if _, _, err := utils.NormalizeURL(o.URLRaw); err != nil {
 		return err
 	}
 
@@ -129,7 +135,7 @@ func validate(o *Opts) error {
 
 	if o.FileExtensionsRaw != "" {
 		for _, ext := range strings.Split(o.FileExtensionsRaw, ",") {
-			if !isExtFormatValid(ext) {
+			if !utils.IsExtFormatValid(ext) {
 				return fmt.Errorf("Invalid extension %s. Extensions must contain a period followed by alphanummeric letters. Example: .php,.html", ext)
 			}
 		}
@@ -156,8 +162,8 @@ func validate(o *Opts) error {
 
 		o.OutputFormat = strings.ToLower(o.OutputFormat)
 
-		if !o.supportedOutputFormats[o.OutputFormat] {
-			return fmt.Errorf("Only the following output formats are supported: %s", strings.Join(mapToStrArray(o.supportedOutputFormats), ", "))
+		if !o.SupportedOutputFormats[o.OutputFormat] {
+			return fmt.Errorf("Only the following output formats are supported: %s", strings.Join(utils.MapToStrArray(o.SupportedOutputFormats), ", "))
 		}
 	}
 
@@ -165,32 +171,32 @@ func validate(o *Opts) error {
 }
 
 func _init(o *Opts) {
-	o.wordlistReadComplete = make(chan bool)
+	o.WordlistReadComplete = make(chan bool)
 	go func() {
-		o.wordlistLineCount = countWordlistLines(o.Wordlist)
-		o.numApproxRequests = o.wordlistLineCount * uint(len(o.FileExtensions))
-		o.wordlistReadComplete <- true
+		o.WordlistLineCount = utils.CountWordlistLines(o.Wordlist)
+		o.NumApproxRequests = o.WordlistLineCount * uint(len(o.FileExtensions))
+		o.WordlistReadComplete <- true
 	}()
 
-	o.fuzzKeyword = "FUZZ"
-	o.cmdLineValueSep, o.headerFieldSep = ",", ","
-	o.maxRequestRetries = 3
-	o.progressSendInterval = 75
-	o.URLRaw, o.URL, _ = normalizeURL(o.URLRaw)
+	o.FuzzKeyword = "FUZZ"
+	o.CmdLineValueSep, o.HeaderFieldSep = ",", ","
+	o.MaxRequestRetries = 3
+	o.ProgressSendInterval = 75
+	o.URLRaw, o.URL, _ = utils.NormalizeURL(o.URLRaw)
 	o.Sleep = time.Duration(o.SleepRaw) * time.Millisecond
 	o.HTTPMethod = strings.ToUpper(o.HTTPMethod)
-	o.HTTPHideCodes = convertSeparatedCmdArg(o.HTTPHideCodesRaw, o.cmdLineValueSep)
-	o.HTTPHideBodyLength = convertSeparatedCmdArg(o.HTTPHideBodyLengthRaw, o.cmdLineValueSep)
-	o.HTTPHideNumWords = convertSeparatedCmdArg(o.HTTPHideNumWordsRaw, o.cmdLineValueSep)
-	o.HTTPHideBodyLines = convertSeparatedCmdArg(o.HTTPHideBodyLinesRaw, o.cmdLineValueSep)
-	o.HTTPHideHeaderLength = convertSeparatedCmdArg(o.HTTPHideHeaderLengthRaw, o.cmdLineValueSep)
+	o.HTTPHideCodes = utils.ConvertSeparatedCmdArg(o.HTTPHideCodesRaw, o.CmdLineValueSep)
+	o.HTTPHideBodyLength = utils.ConvertSeparatedCmdArg(o.HTTPHideBodyLengthRaw, o.CmdLineValueSep)
+	o.HTTPHideNumWords = utils.ConvertSeparatedCmdArg(o.HTTPHideNumWordsRaw, o.CmdLineValueSep)
+	o.HTTPHideBodyLines = utils.ConvertSeparatedCmdArg(o.HTTPHideBodyLinesRaw, o.CmdLineValueSep)
+	o.HTTPHideHeaderLength = utils.ConvertSeparatedCmdArg(o.HTTPHideHeaderLengthRaw, o.CmdLineValueSep)
 
 	if !o.Show404 {
 		o.HTTPHideCodes[http.StatusNotFound] = true
 	}
 
 	if o.FileExtensionsRaw != "" {
-		for _, ext := range strings.Split(o.FileExtensionsRaw, o.cmdLineValueSep) {
+		for _, ext := range strings.Split(o.FileExtensionsRaw, o.CmdLineValueSep) {
 			o.FileExtensions = append(o.FileExtensions, ext)
 		}
 	} else {
@@ -198,14 +204,14 @@ func _init(o *Opts) {
 		o.FileExtensions = append(o.FileExtensions, "")
 	}
 
-	o.fuzzKeywordPresent = func(o *Opts) bool {
-		return strings.Contains(o.URL.Path, o.fuzzKeyword) ||
-			strings.Contains(o.URL.RawQuery, o.fuzzKeyword) ||
-			strings.Contains(o.CustomHeader, o.fuzzKeyword) ||
-			strings.Contains(o.BodyData, o.fuzzKeyword) ||
-			strings.Contains(o.HTTPMethod, o.fuzzKeyword) ||
-			strings.Contains(o.FileExtensionsRaw, o.fuzzKeyword) ||
-			strings.Contains(o.UserAgent, o.fuzzKeyword) ||
-			strings.Contains(o.Cookie, o.fuzzKeyword)
+	o.FuzzKeywordPresent = func(o *Opts) bool {
+		return strings.Contains(o.URL.Path, o.FuzzKeyword) ||
+			strings.Contains(o.URL.RawQuery, o.FuzzKeyword) ||
+			strings.Contains(o.CustomHeader, o.FuzzKeyword) ||
+			strings.Contains(o.BodyData, o.FuzzKeyword) ||
+			strings.Contains(o.HTTPMethod, o.FuzzKeyword) ||
+			strings.Contains(o.FileExtensionsRaw, o.FuzzKeyword) ||
+			strings.Contains(o.UserAgent, o.FuzzKeyword) ||
+			strings.Contains(o.Cookie, o.FuzzKeyword)
 	}(o)
 }

@@ -1,11 +1,10 @@
-package fuzz
+package utils
 
 import (
 	"bufio"
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 	"regexp"
@@ -14,10 +13,10 @@ import (
 	"unicode"
 )
 
-// normalizeURL normalizes example.com:80 to http://example.com:80/
-func normalizeURL(fuzzURL string) (string, *url.URL, error) {
-	if !isHTTPPrepended(fuzzURL) {
-		fuzzURL = prependHTTP(fuzzURL)
+// NormalizeURL normalizes example.com:80 to http://example.com:80/
+func NormalizeURL(fuzzURL string) (string, *url.URL, error) {
+	if !IsHTTPPrepended(fuzzURL) {
+		fuzzURL = PrependHTTP(fuzzURL)
 	}
 
 	// We do it like browsers, just remove the trailing slash.
@@ -48,7 +47,7 @@ func normalizeURL(fuzzURL string) (string, *url.URL, error) {
 	return completeURL, parsedURL, nil
 }
 
-func countWordlistLines(file string) uint {
+func CountWordlistLines(file string) uint {
 	fh, _ := os.Open(file)
 	defer fh.Close()
 
@@ -61,7 +60,7 @@ func countWordlistLines(file string) uint {
 	return lc
 }
 
-func countWords(bytes *[]byte) int {
+func CountWords(bytes *[]byte) int {
 	isWord := false
 	numWords := 0
 	for _, c := range *bytes {
@@ -78,7 +77,7 @@ func countWords(bytes *[]byte) int {
 	return numWords
 }
 
-func headerSize(h http.Header) int {
+func HeaderSize(h http.Header) int {
 	l := 0
 	for name, values := range h {
 		l += len(name)
@@ -90,7 +89,7 @@ func headerSize(h http.Header) int {
 	return l
 }
 
-func strArrayToMapStrBool(arr []string) map[int]bool {
+func StrArrayToMapStrBool(arr []string) map[int]bool {
 	m := map[int]bool{}
 	for _, v := range arr {
 		if i, err := strconv.Atoi(v); err == nil {
@@ -101,7 +100,7 @@ func strArrayToMapStrBool(arr []string) map[int]bool {
 	return m
 }
 
-func mapToStrArray(m map[string]bool) []string {
+func MapToStrArray(m map[string]bool) []string {
 	s := []string{}
 	for k := range m {
 		s = append(s, k)
@@ -110,7 +109,7 @@ func mapToStrArray(m map[string]bool) []string {
 	return s
 }
 
-func isExtFormatValid(ext string) bool {
+func IsExtFormatValid(ext string) bool {
 	if string(ext[0]) != "." {
 		return false
 	}
@@ -124,16 +123,16 @@ func isExtFormatValid(ext string) bool {
 	return true
 }
 
-func isHTTPPrepended(hostname string) bool {
+func IsHTTPPrepended(hostname string) bool {
 	match, _ := regexp.MatchString("^http(s)?://", hostname)
 	return match
 }
 
-func prependHTTP(hostname string) string {
+func PrependHTTP(hostname string) string {
 	return "http://" + hostname
 }
 
-func splitHeaderFields(h, sep string) map[string]string {
+func SplitHeaderFields(h, sep string) map[string]string {
 	header := make(map[string]string)
 
 	if len(h) == 0 {
@@ -157,16 +156,6 @@ func splitHeaderFields(h, sep string) map[string]string {
 	return header
 }
 
-func convertSeparatedCmdArg(argval, sep string) map[int]bool {
-	return strArrayToMapStrBool(strings.Split(argval, sep))
-}
-
-func dumpRequest(req *http.Request) string {
-	b, _ := httputil.DumpRequest(req, true)
-	return string(b)
-}
-
-func dumpResponse(resp *http.Response) string {
-	b, _ := httputil.DumpResponse(resp, true)
-	return string(b)
+func ConvertSeparatedCmdArg(argval, sep string) map[int]bool {
+	return StrArrayToMapStrBool(strings.Split(argval, sep))
 }
