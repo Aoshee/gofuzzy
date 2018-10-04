@@ -58,6 +58,7 @@ type Opts struct {
 	SupportedOutputFormats map[string]bool
 }
 
+// New creates a new Opts struct
 func New() *Opts {
 	return &Opts{}
 }
@@ -107,16 +108,16 @@ func (o *Opts) Parse(outputFormats map[string]bool) error {
 
 	fs.Parse(os.Args[1:])
 
-	if err := validate(o); err != nil {
+	if err := o.validate(); err != nil {
 		return err
 	}
 
-	_init(o)
+	o.initialize()
 
 	return nil
 }
 
-func validate(o *Opts) error {
+func (o *Opts) validate() error {
 	if o.URLRaw == "" {
 		return fmt.Errorf("No URL/hostname provided. Use flag: -u example.com")
 	}
@@ -170,7 +171,7 @@ func validate(o *Opts) error {
 	return nil
 }
 
-func _init(o *Opts) {
+func (o *Opts) initialize() {
 	o.WordlistReadComplete = make(chan bool)
 	go func() {
 		o.WordlistLineCount = utils.CountWordlistLines(o.Wordlist)
