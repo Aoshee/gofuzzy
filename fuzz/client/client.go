@@ -151,13 +151,13 @@ func produceProgress(o *opts.Opts) {
 		<-o.WordlistReadComplete
 
 		tick := time.Tick(time.Millisecond * time.Duration(o.ProgressSendInterval))
-		p := &Progress{}
 		for {
 			select {
 			case <-tick:
-				p.NumDoneRequests = o.NumDoneRequests
-				p.NumApproxRequests = o.NumApproxRequests
-				resultChs.Progress <- p
+				resultChs.Progress <- &Progress{
+					NumDoneRequests:   o.NumDoneRequests,
+					NumApproxRequests: o.NumApproxRequests,
+				}
 			}
 		}
 	}
