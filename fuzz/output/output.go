@@ -10,11 +10,6 @@ import (
 var cli Writer
 var outputWriter Writer
 var outputFile io.Writer
-var supportedFormats map[string]bool
-
-func init() {
-	supportedFormats = map[string]bool{"csv": true, "txt": true, "json": true}
-}
 
 // Writer must be implemented by every output format which wants to write.
 type Writer interface {
@@ -26,7 +21,7 @@ type Writer interface {
 
 // Formats returns all available and supported output formats to which gofuzzy can write to.
 func Formats() map[string]bool {
-	return supportedFormats
+	return map[string]bool{"csv": true, "txt": true, "json": true}
 }
 
 // SetOutput sets the output file and decides on which output media
