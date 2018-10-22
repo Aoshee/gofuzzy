@@ -1,12 +1,12 @@
 # GoFuzzy
 
 GoFuzzy is a web directory/file finder and a HTTP request fuzzer. GoFuzzy is inspired by `wfuzz` which is one of my favorite tools.
-An occurence of the `FUZZ` keyword (anywhere in the request) will be replaced by an entry from the wordlist. Recommended wordlists: see [SecList](https://github.com/danielmiessler/SecLists/tree/master/Discovery/Web-Content).
+An occurence of the `FUZZ` keyword (anywhere in the request) will be replaced by an entry from the wordlist.
 
 ## Sample run
 
 ```bash
-$ gofuzzy -u localhost -w wordlists/wl.txt
+$ gofuzzy -u example.com -w wordlists/wl.txt
 
    _ __________ + _________     *
 _ _ __ /  ________/ ____________________ ___   *
@@ -73,21 +73,12 @@ go install
 gofuzzy -h
 ```
 
-## Usage
-
-Arguments and help:
-
-```bash
-gofuzzy -h
-```
+## Run/Usage
 
 Find hidden files or directories:
 
 ```bash
 gofuzzy -u example.com -w wl.txt
-```
-
-```bash
 gofuzzy -u example.com/subdir/FUZZ/config.bak -w wl.txt
 ```
 
@@ -129,5 +120,9 @@ docker build -t gofuzzy .
 Run GoFuzzy in a container:
 
 ```bash
-docker run -v $(pwd)/wordlists:/wordlists gofuzzy -u localhost -w /wordlists/wl.txt
+docker run -v $(pwd)/wordlists:/wordlists gofuzzy -u example.com -w /wordlists/wl.txt
 ```
+
+## Wordlists
+
+See [SecLists](https://github.com/danielmiessler/SecLists/tree/master/Discovery/Web-Content) for recommended wordlists.
