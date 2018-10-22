@@ -106,6 +106,12 @@ func (o *Opts) Parse(outputFormats map[string]bool) error {
 	fs.BoolVar(&o.ProgressOutput, "p", true, "Progress output.")
 	fs.BoolVar(&o.Show404, "404", false, "Show 404 status code responses.")
 
+	// Calling the executable without an argument shows the help.
+	if len(os.Args) <= 1 {
+		fs.Usage()
+		os.Exit(0)
+	}
+
 	fs.Parse(os.Args[1:])
 
 	if err := o.validate(); err != nil {
