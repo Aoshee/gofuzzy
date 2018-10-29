@@ -61,11 +61,11 @@ func CountWordlistLines(file string) uint {
 }
 
 func CountWords(bytes *[]byte) int {
-	isWord := false
 	numWords := 0
+	isWord := false
+
 	for _, c := range *bytes {
 		r := rune(c)
-
 		if unicode.IsLetter(r) {
 			isWord = true
 		} else if isWord && !unicode.IsLetter(r) {
@@ -79,10 +79,10 @@ func CountWords(bytes *[]byte) int {
 
 func HeaderSize(h http.Header) int {
 	l := 0
-	for name, values := range h {
-		l += len(name)
-		for _, value := range values {
-			l += len(value)
+	for field, value := range h {
+		l += len(field)
+		for _, v := range value {
+			l += len(v)
 		}
 	}
 
