@@ -24,44 +24,20 @@ Chars(-hh)    Words(-hw)   Lines(-hl)   Header(-hr)  Code(-hc)    Result
 185           22           7            119          301          test
 ```
 
-## Build
-
-Make sure Go is [installed](https://golang.org/doc/install) and the `$GOPATH` is set correctly:
-
-```bash
-go get github.com/shellrausch/gofuzzy
-cd $GOPATH/src/github.com/shellrausch/gofuzzy
-go build
-```
-
-## Install
-
-Make sure you have followed the _Build_ step above:
-
-```bash
-cd $GOPATH/src/github.com/shellrausch/gofuzzy
-go install
-```
-
-After the installation the `gofuzzy` binary will be in `$PATH`. That means you can call `gofuzzy` from everywhere.
+## Build and install
 
 ### Kali 2018.3
 
-Install Go:
+Install Go and configure Go pathes:
 
 ```bash
-apt-get update
-apt-get install golang-1.10 -y
-```
-
-Configure pathes:
-
-```bash
+apt-get update && apt-get install golang-1.10 -y
 mkdir $HOME/go
-export GOROOT=/usr/lib/go-1.10
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOROOT/bin
-export PATH=$PATH:$GOPATH/bin
+echo 'export GOROOT=/usr/lib/go-1.10' >> $HOME/.bashrc
+echo 'export GOPATH=$HOME/go' >> $HOME/.bashrc
+echo 'export PATH=$PATH:$GOROOT/bin' >> $HOME/.bashrc
+echo 'export PATH=$PATH:$GOPATH/bin' >> $HOME/.bashrc
+source $HOME/.bashrc
 ```
 
 Install GoFuzzy:
@@ -73,7 +49,18 @@ go install
 gofuzzy -h
 ```
 
-## Run/Usage
+### macOS and Linux
+
+First make sure Go is [installed](https://golang.org/doc/install) and the [`$GOPATH`](https://github.com/golang/go/wiki/SettingGOPATH) env var is set correctly. Afterwards you can install GoFuzzy:
+
+```bash
+go get github.com/shellrausch/gofuzzy
+cd $GOPATH/src/github.com/shellrausch/gofuzzy
+go install
+gofuzzy -h
+```
+
+## Run and usage
 
 Find hidden files or directories:
 
