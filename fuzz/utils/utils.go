@@ -139,17 +139,17 @@ func SplitHeaderFields(h, sep string) map[string]string {
 		return header
 	}
 
-	headerFields := strings.Split(h, sep)
+	headerLine := strings.Split(h, sep)
+	for _, h := range headerLine {
+		sepIndex := strings.Index(h, ":")
 
-	for _, h := range headerFields {
-		split := strings.Split(h, ":")
-		if len(split) != 2 {
-			log.Printf("Header not complete or the header value contains a separator char '%s' (without quotes). Broken header is: %v", sep, split)
+		if sepIndex == -1 {
+			log.Fatalln("Malformed header name/value. Missing separator colon ':', like name:value")
 			continue
 		}
 
-		name := strings.Trim(split[0], " ")
-		value := strings.Trim(split[1], " ")
+		name := strings.TrimSpace(h[:sepIndex])
+		value := strings.TrimSpace(h[sepIndex+1:])
 		header[name] = value
 	}
 
