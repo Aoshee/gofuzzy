@@ -128,7 +128,7 @@ func (o *Opts) validate() error {
 		return fmt.Errorf("No URL/hostname provided. Use flag: -u example.com")
 	}
 
-	if _, _, err := utils.NormalizeURL(o.URLRaw); err != nil {
+	if _, err := utils.NormalizeURL(o.URLRaw); err != nil {
 		return err
 	}
 
@@ -189,7 +189,7 @@ func (o *Opts) initialize() {
 	o.CmdLineValueSep, o.HeaderFieldSep = ",", ","
 	o.MaxRequestRetries = 3
 	o.ProgressSendInterval = 75
-	o.URLRaw, o.URL, _ = utils.NormalizeURL(o.URLRaw)
+	o.URL, _ = utils.NormalizeURL(o.URLRaw)
 	o.Sleep = time.Duration(o.SleepRaw) * time.Millisecond
 	o.HTTPMethod = strings.ToUpper(o.HTTPMethod)
 	o.HTTPHideCodes = utils.MapSplit(o.HTTPHideCodesRaw, o.CmdLineValueSep)

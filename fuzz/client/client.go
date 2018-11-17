@@ -120,7 +120,7 @@ func Start(o *opts.Opts) {
 func produceRequests(o *opts.Opts, queuedReqsCh chan *request, producerDoneCh chan bool) {
 	fh, _ := os.Open(o.Wordlist)
 
-	url := strings.TrimSuffix(o.URLRaw, "/")
+	url := strings.TrimSuffix(o.URL.String(), "/")
 	header := utils.SplitHeaderFields(o.CustomHeader, o.HeaderFieldSep)
 
 	s := bufio.NewScanner(fh)

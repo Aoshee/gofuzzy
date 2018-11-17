@@ -14,37 +14,21 @@ import (
 )
 
 // NormalizeURL normalizes example.com:80 to http://example.com:80
-func NormalizeURL(fuzzURL string) (string, *url.URL, error) {
-	if !isHTTPPrepended(fuzzURL) {
-		fuzzURL = prependHTTP(fuzzURL)
+func NormalizeURL(u string) (*url.URL, error) {
+	if !isHTTPPrepended(u) {
+		u = prependHTTP(u)
 	}
 
 	// We do it like browsers, just remove the trailing slash.
 	// This will save us from a lot of problems later.
-	fuzzURL = strings.TrimSuffix(fuzzURL, "/")
+	u = strings.TrimSuffix(u, "/")
 
-	p, err := url.Parse(fuzzURL)
+	parsedURL, err := url.Parse(u)
 	if err != nil {
-		return "", nil, fmt.Errorf("Unable to parse URL/hostname %s. %s", fuzzURL, err)
+		return nil, fmt.Errorf("Unable to parse URL/hostname: %s. %s", u, err)
 	}
 
-	scheme := p.Scheme + "://"
-
-	port := ""
-	if p.Port() != "" {
-		port = ":" + p.Port()
-	}
-
-	query := ""
-	if p.RawQuery != "" {
-		query = "?" + p.RawQuery
-	}
-
-	completeURL := scheme + p.Hostname() + port + p.Path + query
-	// Parse the URL again to get a clean result and to validate our built construction.
-	parsedURL, _ := url.Parse(completeURL)
-
-	return completeURL, parsedURL, nil
+	return parsedURL, nil
 }
 
 // CountWordlistLines counts all lines in a file.
