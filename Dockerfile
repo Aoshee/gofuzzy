@@ -2,12 +2,9 @@
 FROM golang:alpine AS builder
 
 WORKDIR /go/src/github.com/shellrausch/gofuzzy/
-
 COPY . .
 
-RUN apk update && apk add git
-RUN go get -d
-RUN CGO_ENABLED=0 GOOS=linux go build -a -o gofuzzy
+RUN CGO_ENABLED=0 go build -a -o gofuzzy
 
 # Stage: Running
 FROM alpine:latest
