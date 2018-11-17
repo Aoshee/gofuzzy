@@ -9,24 +9,23 @@ import (
 )
 
 func main() {
-	o := opts.New()
-	if err := o.Parse(output.Formats()); err != nil {
+	opt := opts.New()
+	if err := opt.Parse(output.SupportedFormats()); err != nil {
 		log.Fatal(err)
 	}
+	out := output.New(opt.OutputFile, opt.OutputFormat)
 
-	output.SetOutput(o.OutputFile, o.OutputFormat)
-
-	chans := client.New(o)
-	go client.Start(o)
+	chans := client.New(opt)
+	go client.Start(opt)
 
 	for {
 		select {
 		case r := <-chans.Result:
-			output.Write(r)
+			out.Write(r)
 		case p := <-chans.Progress:
-			go output.WriteProgress(p)
-		case <-chans.Finished:
-			output.Close()
+			go out.WriteProgress(p)
+		case <-chans.Finish:
+			out.Close()
 			return
 		}
 	}

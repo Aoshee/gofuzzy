@@ -13,10 +13,10 @@ import (
 	"unicode"
 )
 
-// NormalizeURL normalizes example.com:80 to http://example.com:80/
+// NormalizeURL normalizes example.com:80 to http://example.com:80
 func NormalizeURL(fuzzURL string) (string, *url.URL, error) {
-	if !IsHTTPPrepended(fuzzURL) {
-		fuzzURL = PrependHTTP(fuzzURL)
+	if !isHTTPPrepended(fuzzURL) {
+		fuzzURL = prependHTTP(fuzzURL)
 	}
 
 	// We do it like browsers, just remove the trailing slash.
@@ -47,6 +47,7 @@ func NormalizeURL(fuzzURL string) (string, *url.URL, error) {
 	return completeURL, parsedURL, nil
 }
 
+// CountWordlistLines counts all lines in a file.
 func CountWordlistLines(file string) uint {
 	fh, _ := os.Open(file)
 	defer fh.Close()
@@ -60,6 +61,7 @@ func CountWordlistLines(file string) uint {
 	return lc
 }
 
+// CountWords counts all words for a given string. A word consists just of unicode letters.
 func CountWords(bytes *[]byte) int {
 	numWords := 0
 	isWord := false
@@ -77,6 +79,7 @@ func CountWords(bytes *[]byte) int {
 	return numWords
 }
 
+// HeaderSize calculates the whole header size.
 func HeaderSize(h http.Header) int {
 	l := 0
 	for field, value := range h {
@@ -89,17 +92,7 @@ func HeaderSize(h http.Header) int {
 	return l
 }
 
-func StrArrayToMapStrBool(arr []string) map[int]bool {
-	m := map[int]bool{}
-	for _, v := range arr {
-		if i, err := strconv.Atoi(v); err == nil {
-			m[i] = true
-		}
-	}
-
-	return m
-}
-
+// MapToStrArray inserts map keys into an array.
 func MapToStrArray(m map[string]bool) []string {
 	s := []string{}
 	for k := range m {
@@ -109,6 +102,7 @@ func MapToStrArray(m map[string]bool) []string {
 	return s
 }
 
+// IsExtFormatValid checks if an extension has a valid format: \.[a-z0-9]+
 func IsExtFormatValid(ext string) bool {
 	if string(ext[0]) != "." {
 		return false
@@ -123,15 +117,7 @@ func IsExtFormatValid(ext string) bool {
 	return true
 }
 
-func IsHTTPPrepended(hostname string) bool {
-	match, _ := regexp.MatchString("^http(s)?://", hostname)
-	return match
-}
-
-func PrependHTTP(hostname string) string {
-	return "http://" + hostname
-}
-
+// SplitHeaderFields splits header fields by a ":".
 func SplitHeaderFields(h, sep string) map[string]string {
 	header := make(map[string]string)
 
@@ -156,6 +142,27 @@ func SplitHeaderFields(h, sep string) map[string]string {
 	return header
 }
 
-func ConvertSeparatedCmdArg(argval, sep string) map[int]bool {
-	return StrArrayToMapStrBool(strings.Split(argval, sep))
+// MapSplit splits a string by separator, converts the tokens to an int and adds the converted token as a key to an map.
+func MapSplit(argval, sep string) map[int]bool {
+	return convertToIntMap(strings.Split(argval, sep))
+}
+
+func isHTTPPrepended(hostname string) bool {
+	match, _ := regexp.MatchString("^http(s)?://", hostname)
+	return match
+}
+
+func prependHTTP(hostname string) string {
+	return "http://" + hostname
+}
+
+func convertToIntMap(arr []string) map[int]bool {
+	m := map[int]bool{}
+	for _, v := range arr {
+		if i, err := strconv.Atoi(v); err == nil {
+			m[i] = true
+		}
+	}
+
+	return m
 }

@@ -1,69 +1,70 @@
 package output
 
 import (
-	"io"
 	"os"
 
 	"github.com/shellrausch/gofuzzy/fuzz/client"
 )
 
-var cli Writer
-var outputWriter Writer
-var outputFile io.Writer
+// Output contains the output writers.
+type Output struct {
+	cliWriter  FuzzWriter
+	fileWriter FuzzWriter
+}
 
-// Writer must be implemented by every output format which wants to write.
-type Writer interface {
+// FuzzWriter must be implemented by every output format which wants to write.
+type FuzzWriter interface {
 	init()
 	write(*client.Result)
 	writeProgress(*client.Progress)
 	close()
 }
 
-// Formats returns all available and supported output formats to which gofuzzy can write to.
-func Formats() map[string]bool {
+// SupportedFormats returns all available and supported output
+// formats to which gofuzzy can write to.
+func SupportedFormats() map[string]bool {
 	return map[string]bool{"csv": true, "txt": true, "json": true}
 }
 
-// SetOutput sets the output file and decides on which output media
+// New sets the output file and decides on which output media
 // the results should be shown. We always output on the CLI, also if another
 // output media is provided.
-func SetOutput(filename, outputFormat string) {
-	outputFile, _ = os.Create(filename)
+func New(filename, outputFormat string) *Output {
+	f, _ := os.Create(filename)
 
-	var ow Writer
-
+	o := &Output{}
 	switch outputFormat {
 	case "csv":
-		ow = csv{}
+		o.fileWriter = csv{file: f}
 	case "txt":
-		ow = txt{}
+		o.fileWriter = txt{file: f}
 	case "json":
-		ow = json{}
+		o.fileWriter = json{file: f}
 	default:
-		ow = null{}
+		o.fileWriter = null{}
 	}
+	o.fileWriter.init()
 
-	ow.init()
-	outputWriter = ow
+	// We write always to the CLI.
+	o.cliWriter = cli{}
+	o.cliWriter.init()
 
-	// We want always a CLI output.
-	cli = tabCli{}
-	cli.init()
+	return o
 }
 
-// Write just writes the result to the defined output and additionaly to the CLI.
-func Write(r *client.Result) {
-	outputWriter.write(r)
-	cli.write(r)
+// Write writes the result to the defined output and additionaly to the CLI.
+func (o *Output) Write(r *client.Result) {
+	o.fileWriter.write(r)
+	o.cliWriter.write(r)
 }
 
-// WriteProgress just writes the progress to the defined output and additionaly to the CLI.
-func WriteProgress(pr *client.Progress) {
-	outputWriter.writeProgress(pr)
-	cli.writeProgress(pr)
+// WriteProgress writes the progress to the defined output and additionaly to the CLI.
+func (o *Output) WriteProgress(pr *client.Progress) {
+	o.fileWriter.writeProgress(pr)
+	o.cliWriter.writeProgress(pr)
 }
 
 // Close closes output writer.
-func Close() {
-	outputWriter.close()
+func (o *Output) Close() {
+	o.fileWriter.close()
 }

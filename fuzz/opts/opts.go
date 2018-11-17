@@ -154,7 +154,7 @@ func (o *Opts) validate() error {
 
 	if o.OutputFile != "" {
 		if o.OutputFormat == "" {
-			return fmt.Errorf("Provide an output format with -of")
+			return fmt.Errorf("Provide an output format with -of. Currently supported: " + strings.Join(utils.MapToStrArray(o.SupportedOutputFormats), ", "))
 		}
 
 		if _, err := os.Create(o.OutputFile); err != nil {
@@ -192,11 +192,11 @@ func (o *Opts) initialize() {
 	o.URLRaw, o.URL, _ = utils.NormalizeURL(o.URLRaw)
 	o.Sleep = time.Duration(o.SleepRaw) * time.Millisecond
 	o.HTTPMethod = strings.ToUpper(o.HTTPMethod)
-	o.HTTPHideCodes = utils.ConvertSeparatedCmdArg(o.HTTPHideCodesRaw, o.CmdLineValueSep)
-	o.HTTPHideBodyLength = utils.ConvertSeparatedCmdArg(o.HTTPHideBodyLengthRaw, o.CmdLineValueSep)
-	o.HTTPHideNumWords = utils.ConvertSeparatedCmdArg(o.HTTPHideNumWordsRaw, o.CmdLineValueSep)
-	o.HTTPHideBodyLines = utils.ConvertSeparatedCmdArg(o.HTTPHideBodyLinesRaw, o.CmdLineValueSep)
-	o.HTTPHideHeaderLength = utils.ConvertSeparatedCmdArg(o.HTTPHideHeaderLengthRaw, o.CmdLineValueSep)
+	o.HTTPHideCodes = utils.MapSplit(o.HTTPHideCodesRaw, o.CmdLineValueSep)
+	o.HTTPHideBodyLength = utils.MapSplit(o.HTTPHideBodyLengthRaw, o.CmdLineValueSep)
+	o.HTTPHideNumWords = utils.MapSplit(o.HTTPHideNumWordsRaw, o.CmdLineValueSep)
+	o.HTTPHideBodyLines = utils.MapSplit(o.HTTPHideBodyLinesRaw, o.CmdLineValueSep)
+	o.HTTPHideHeaderLength = utils.MapSplit(o.HTTPHideHeaderLengthRaw, o.CmdLineValueSep)
 
 	if !o.Show404 {
 		o.HTTPHideCodes[http.StatusNotFound] = true

@@ -22,7 +22,7 @@ import (
 type ResultChannels struct {
 	Result   chan *Result
 	Progress chan *Progress
-	Finished chan bool
+	Finish   chan bool
 }
 
 // Result contains response results and results which are calculated
@@ -33,7 +33,7 @@ type Result struct {
 	StatusCode    int
 	NumLines      int
 	HeaderSize    int
-	Result        string
+	Payload       string
 }
 
 // Progress contains the actual progress information.
@@ -63,7 +63,7 @@ func New(o *opts.Opts) ResultChannels {
 	resultChs = ResultChannels{
 		Result:   make(chan *Result, o.Concurrency),
 		Progress: make(chan *Progress, o.Concurrency), // Just a buffer which is large enough
-		Finished: make(chan bool),
+		Finish:   make(chan bool),
 	}
 
 	httpClient = initHTTPClient(o)
@@ -73,7 +73,7 @@ func New(o *opts.Opts) ResultChannels {
 
 // Start starts the main fuzzing process for a given option set.
 func Start(o *opts.Opts) {
-	// We minimize the chance to be 'blocked' by the filesystem as we will
+	// We minimize the chance to be soft blocked by the filesystem as we will
 	// fetch more data at once (buffered channel), so the channel remains constantly filled.
 	queuedReqsCh := make(chan *request, o.Concurrency*o.Concurrency)
 
@@ -110,9 +110,9 @@ func Start(o *opts.Opts) {
 	close(queuedReqsCh)
 	concurrencyWg.Wait()
 
-	resultChs.Finished <- true
+	resultChs.Finish <- true
 	close(resultChs.Result)
-	close(resultChs.Finished)
+	close(resultChs.Finish)
 }
 
 // produceRequests reads an entry from the wordlist and produces a request-stub
@@ -145,9 +145,9 @@ func produceRequests(o *opts.Opts, queuedReqsCh chan *request, producerDoneCh ch
 // sends them via a channel.
 func produceProgress(o *opts.Opts) {
 	if o.ProgressOutput {
-		// Especially on large wordlists this barrier is important.
-		// Because reading the whole wordlist can take some time.
+		// No progress output until the whole wordlist was read.
 		// Otherwise we could get a division by zero in further progress calculation.
+		// Especially on huge wordlists this barrier is important.
 		<-o.WordlistReadComplete
 
 		tick := time.Tick(time.Millisecond * time.Duration(o.ProgressSendInterval))
@@ -171,7 +171,7 @@ func consumeRequest(o *opts.Opts, r *request) {
 
 	o.NumDoneRequests++ // We don't care here for race conditions. It's just a nice to have progress value.
 
-	if err == nil && isInHideFilter(o, res) {
+	if err == nil && isInFilter(o, res) {
 		resultChs.Result <- res
 	}
 
@@ -183,7 +183,7 @@ func consumeRequest(o *opts.Opts, r *request) {
 
 			consumeRequest(o, r)
 		} else {
-			log.Printf("Giving up a request, too many errors: %s", err)
+			log.Printf("Giving up request. Too many errors: %s", err)
 		}
 	}
 }
@@ -219,7 +219,7 @@ func invokeRequest(o *opts.Opts, r *request) (*Result, error) {
 	}
 
 	if o.FuzzKeywordPresent {
-		req, err = replaceFuzzKeywordOccurence(o, req, r)
+		req, err = replaceFuzzKeyword(o, req, r)
 
 		if err != nil {
 			return nil, err
@@ -244,7 +244,7 @@ func invokeRequest(o *opts.Opts, r *request) (*Result, error) {
 
 // The FUZZ keyword can be everywhere in the HTTP request.
 // We replace the first occurency of the keyword FUZZ with an entry from the wordlist.
-func replaceFuzzKeywordOccurence(o *opts.Opts, req *http.Request, r *request) (*http.Request, error) {
+func replaceFuzzKeyword(o *opts.Opts, req *http.Request, r *request) (*http.Request, error) {
 	reqBytes, _ := httputil.DumpRequest(req, true)
 
 	fuzzKeywordBytes := []byte(o.FuzzKeyword)
@@ -283,8 +283,8 @@ func replaceFuzzKeywordOccurence(o *opts.Opts, req *http.Request, r *request) (*
 }
 
 // populateResult creates the Result.
-// In the next step the Result is enriched with additional results which are
-// calculated at runtime, e.g. number of words.
+// The Result is enriched with additional information which are
+// calculated at runtime, e.g. number of words/lines.
 func populateResult(resp *http.Response, entry string) *Result {
 	b, _ := ioutil.ReadAll(resp.Body)
 
@@ -300,13 +300,12 @@ func populateResult(resp *http.Response, entry string) *Result {
 		NumWords:      utils.CountWords(&b),
 		HeaderSize:    utils.HeaderSize(resp.Header),
 		StatusCode:    resp.StatusCode,
-		Result:        entry,
+		Payload:       entry,
 	}
 }
 
-// isInHideFilter determines if some values, sizes, lengths, ...
-// of the result should be filtered.
-func isInHideFilter(o *opts.Opts, res *Result) bool {
+// isInFilter determines if result values, sizes, lengths, etc. should be filtered.
+func isInFilter(o *opts.Opts, res *Result) bool {
 	return !o.HTTPHideCodes[res.StatusCode] &&
 		!o.HTTPHideBodyLength[res.ContentLength] &&
 		!o.HTTPHideNumWords[res.NumWords] &&
@@ -327,7 +326,6 @@ func initHTTPClient(o *opts.Opts) http.Client {
 			return nil
 		},
 		// Ignore invalid certs by default, since we are interested in the content.
-		// And -hopefully- we know what we are doing :}
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
