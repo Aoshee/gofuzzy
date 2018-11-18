@@ -48,7 +48,7 @@ type request struct {
 	url     string
 	data    string
 	method  string
-	entry   string
+	payload string
 	ext     string
 	retries uint8
 	header  map[string]string
@@ -127,12 +127,12 @@ func produceRequests(o *opts.Opts, queuedReqsCh chan *request, producerDoneCh ch
 	for s.Scan() {
 		for _, ext := range o.FileExtensions {
 			queuedReqsCh <- &request{
-				method: o.HTTPMethod,
-				url:    url,
-				header: header,
-				data:   o.BodyData,
-				ext:    ext,
-				entry:  s.Text(),
+				method:  o.HTTPMethod,
+				url:     url,
+				header:  header,
+				data:    o.BodyData,
+				ext:     ext,
+				payload: s.Text(),
 			}
 		}
 	}
@@ -196,8 +196,8 @@ func invokeRequest(o *opts.Opts, r *request) (*Result, error) {
 
 	url := r.url
 	if !o.FuzzKeywordPresent {
-		r.entry = strings.TrimPrefix(r.entry, "/")
-		url = r.url + "/" + r.entry + r.ext
+		r.payload = strings.TrimPrefix(r.payload, "/")
+		url = r.url + "/" + r.payload + r.ext
 	}
 
 	req, err = http.NewRequest(r.method, url, strings.NewReader(r.data))
@@ -231,7 +231,7 @@ func invokeRequest(o *opts.Opts, r *request) (*Result, error) {
 		return nil, err
 	}
 
-	result := populateResult(resp, r.entry)
+	result := populateResult(resp, r.payload)
 	defer resp.Body.Close()
 
 	_, err = io.Copy(ioutil.Discard, resp.Body)
@@ -248,7 +248,7 @@ func replaceFuzzKeyword(o *opts.Opts, req *http.Request, r *request) (*http.Requ
 	reqBytes, _ := httputil.DumpRequest(req, true)
 
 	fuzzKeywordBytes := []byte(o.FuzzKeyword)
-	entryBytes := []byte(r.entry)
+	entryBytes := []byte(r.payload)
 
 	// Replaces most of the FUZZ places in the request.
 	replaced := bytes.Replace(reqBytes, fuzzKeywordBytes, entryBytes, -1)
@@ -261,16 +261,16 @@ func replaceFuzzKeyword(o *opts.Opts, req *http.Request, r *request) (*http.Requ
 	reqCopy, err := http.ReadRequest(bufio.NewReader(bytes.NewBuffer(replaced)))
 
 	// Replace extension.
-	ext := strings.Replace(r.ext, o.FuzzKeyword, r.entry, -1)
+	ext := strings.Replace(r.ext, o.FuzzKeyword, r.payload, -1)
 	// Replace URL.
-	url := strings.Replace(req.URL.String()+ext, o.FuzzKeyword, r.entry, -1)
+	url := strings.Replace(req.URL.String()+ext, o.FuzzKeyword, r.payload, -1)
 
 	if err != nil {
 		return nil, err
 	}
 
 	// Replace request body.
-	body := strings.Replace(r.data, o.FuzzKeyword, r.entry, -1)
+	body := strings.Replace(r.data, o.FuzzKeyword, r.payload, -1)
 
 	req, err = http.NewRequest(reqCopy.Method, url, strings.NewReader(body))
 	req.Header = reqCopy.Header
@@ -289,7 +289,7 @@ func populateResult(resp *http.Response, entry string) *Result {
 	b, _ := ioutil.ReadAll(resp.Body)
 
 	// -1 indicates the length is unknown. Hence we count the body size manually.
-	// This condition occures often with HTTP status codes 30x and 40x.
+	// This condition often occures with HTTP status codes 30x and 40x.
 	if resp.ContentLength == -1 {
 		resp.ContentLength = int64(len(b))
 	}
