@@ -1,7 +1,7 @@
 # GoFuzzy
 
 GoFuzzy is a web directory/file finder and a HTTP request fuzzer. GoFuzzy is inspired by `wfuzz` which is one of my favorite tools.
-An occurence of the `FUZZ` keyword (anywhere in the request) will be replaced by an entry from the wordlist.
+An occurence of the `FUZZ` keyword (anywhere in the request) will be replaced by a payload from the wordlist.
 
 ## Sample run
 
@@ -26,7 +26,7 @@ Chars(-hh)    Words(-hw)   Lines(-hl)   Header(-hr)  Code(-hc)    Result
 
 ## Build and install
 
-### Kali 2018.3
+### Kali 2018.3/4
 
 Install Go and configure Go pathes:
 

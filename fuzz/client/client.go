@@ -115,7 +115,7 @@ func Start(o *opts.Opts) {
 	close(resultChs.Finish)
 }
 
-// produceRequests reads an entry from the wordlist and produces a request-stub
+// produceRequests reads a payload from the wordlist and produces a request-stub
 // with all relevant information to invoke a request.
 func produceRequests(o *opts.Opts, queuedReqsCh chan *request, producerDoneCh chan bool) {
 	fh, _ := os.Open(o.Wordlist)
@@ -189,7 +189,7 @@ func consumeRequest(o *opts.Opts, r *request) {
 }
 
 // invokeRequest does the raw HTTP request. Before a HTTP request is finally done
-// the first occurence of the FUZZ keyword will be replaced by a wordlist entry.
+// the first occurence of the FUZZ keyword will be replaced by a wordlist payload.
 func invokeRequest(o *opts.Opts, r *request) (*Result, error) {
 	var req *http.Request
 	var err error
@@ -243,19 +243,19 @@ func invokeRequest(o *opts.Opts, r *request) (*Result, error) {
 }
 
 // The FUZZ keyword can be everywhere in the HTTP request.
-// We replace the first occurency of the keyword FUZZ with an entry from the wordlist.
+// We replace the first occurency of the keyword FUZZ with a payload from the wordlist.
 func replaceFuzzKeyword(o *opts.Opts, req *http.Request, r *request) (*http.Request, error) {
 	reqBytes, _ := httputil.DumpRequest(req, true)
 
 	fuzzKeywordBytes := []byte(o.FuzzKeyword)
-	entryBytes := []byte(r.payload)
+	payloadBytes := []byte(r.payload)
 
 	// Replaces most of the FUZZ places in the request.
-	replaced := bytes.Replace(reqBytes, fuzzKeywordBytes, entryBytes, -1)
+	replaced := bytes.Replace(reqBytes, fuzzKeywordBytes, payloadBytes, -1)
 	// Go renames header fields automatically to the following format:
 	// "FUZZ: text/html" to "Fuzz: text/html".
 	// Therefore we make also an additional 'Fuzz' replacement.
-	replaced = bytes.Replace(replaced, bytes.Title(bytes.ToLower(fuzzKeywordBytes)), entryBytes, -1)
+	replaced = bytes.Replace(replaced, bytes.Title(bytes.ToLower(fuzzKeywordBytes)), payloadBytes, -1)
 
 	// Creates and validates a request from a textual (raw) request.
 	reqCopy, err := http.ReadRequest(bufio.NewReader(bytes.NewBuffer(replaced)))
@@ -285,7 +285,7 @@ func replaceFuzzKeyword(o *opts.Opts, req *http.Request, r *request) (*http.Requ
 // populateResult creates the Result.
 // The Result is enriched with additional information which are
 // calculated at runtime, e.g. number of words/lines.
-func populateResult(resp *http.Response, entry string) *Result {
+func populateResult(resp *http.Response, payload string) *Result {
 	b, _ := ioutil.ReadAll(resp.Body)
 
 	// -1 indicates the length is unknown. Hence we count the body size manually.
@@ -300,7 +300,7 @@ func populateResult(resp *http.Response, entry string) *Result {
 		NumWords:      utils.CountWords(&b),
 		HeaderSize:    utils.HeaderSize(resp.Header),
 		StatusCode:    resp.StatusCode,
-		Payload:       entry,
+		Payload:       payload,
 	}
 }
 

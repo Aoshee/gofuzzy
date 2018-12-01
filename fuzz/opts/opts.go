@@ -12,7 +12,7 @@ import (
 	"github.com/shellrausch/gofuzzy/fuzz/utils"
 )
 
-// Opts contains all passed cmdline args as well as the parsed ones.
+// Opts contains all passed command line args as well as the parsed ones.
 type Opts struct {
 	URLRaw                  string
 	HTTPHideBodyLinesRaw    string
@@ -63,14 +63,14 @@ func New() *Opts {
 	return &Opts{}
 }
 
-// Parse parses and validates the cmdline args.
+// Parse parses and validates the command line args.
 func (o *Opts) Parse(outputFormats map[string]bool) error {
 	o.SupportedOutputFormats = outputFormats
 
 	fs := flag.NewFlagSet("gofuzzy", flag.ExitOnError)
 	fs.Usage = func() {
 		fmt.Print("USAGE: gofuzzy -u example.com -w wl.txt [options]")
-		fmt.Println("\n   If the keyword '\x1b[31mFUZZ\x1b[0m' is provided somewhere, GoFuzzy will replace it with an entry from the wordlist.")
+		fmt.Println("\n   If the keyword '\x1b[31mFUZZ\x1b[0m' is provided somewhere, GoFuzzy will replace it with a payload from the wordlist.")
 		fmt.Println("\nEXAMPLES:")
 		fmt.Println("   Find hidden files or directories:")
 		fmt.Println("   # gofuzzy -u example.com -w wl.txt")
@@ -188,7 +188,7 @@ func (o *Opts) initialize() {
 	o.FuzzKeyword = "FUZZ"
 	o.CmdLineValueSep, o.HeaderFieldSep = ",", ","
 	o.MaxRequestRetries = 3
-	o.ProgressSendInterval = 75
+	o.ProgressSendInterval = 75 // In milliseconds
 	o.URL, _ = utils.NormalizeURL(o.URLRaw)
 	o.Sleep = time.Duration(o.SleepRaw) * time.Millisecond
 	o.HTTPMethod = strings.ToUpper(o.HTTPMethod)
